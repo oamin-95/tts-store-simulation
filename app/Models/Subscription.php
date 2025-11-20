@@ -20,6 +20,9 @@ class Subscription extends Model
         'meta',
         'status',
         'keycloak_realm_id',
+        'keycloak_client_id',
+        'keycloak_client_secret',
+        'keycloak_client_uuid',
     ];
 
     protected $casts = [
@@ -35,13 +38,20 @@ class Subscription extends Model
         parent::boot();
 
         static::created(function ($subscription) {
-            // Load user relationship if not already loaded
-            if (!$subscription->relationLoaded('user')) {
-                $subscription->load('user');
-            }
+            // Dispatch event AFTER database transaction commits
+            // This ensures all subscription data (including domain) is saved
+            \Illuminate\Support\Facades\DB::afterCommit(function () use ($subscription) {
+                // Refresh to get latest data from database
+                $subscription->refresh();
 
-            // Dispatch event with subscription and user
-            event(new SubscriptionCreated($subscription, $subscription->user));
+                // Load user relationship if not already loaded
+                if (!$subscription->relationLoaded('user')) {
+                    $subscription->load('user');
+                }
+
+                // Dispatch event with subscription and user
+                event(new SubscriptionCreated($subscription, $subscription->user));
+            });
         });
     }
 

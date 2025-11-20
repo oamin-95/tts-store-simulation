@@ -37,8 +37,21 @@ return [
 
     'keycloak' => [
         'url' => env('KEYCLOAK_URL', 'http://localhost:8090'),
-        'admin_user' => env('KEYCLOAK_ADMIN_USER', 'admin'),
-        'admin_password' => env('KEYCLOAK_ADMIN_PASSWORD', 'admin123'),
+        'service_account' => [
+            'client_id' => env('KEYCLOAK_SERVICE_CLIENT_ID', 'saas-marketplace-admin'),
+            'client_secret' => env('KEYCLOAK_SERVICE_CLIENT_SECRET'),
+        ],
+    ],
+
+    'products' => [
+        'training' => [
+            'url' => env('TRAINING_PLATFORM_URL', 'http://localhost:5000'),
+            'webhook_url' => env('TRAINING_PLATFORM_WEBHOOK_URL', 'http://localhost:5000/api/keycloak/setup'),
+        ],
+        'services' => [
+            'url' => env('SERVICES_PLATFORM_URL', 'http://localhost:7000'),
+            'webhook_url' => env('SERVICES_PLATFORM_WEBHOOK_URL', 'http://localhost:7000/api/keycloak/setup'),
+        ],
     ],
 
 ];

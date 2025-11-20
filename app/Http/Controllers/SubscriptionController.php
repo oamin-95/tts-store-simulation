@@ -76,6 +76,11 @@ class SubscriptionController extends Controller
     private function subscribeTraining($user)
     {
         // Call Training Platform API to create tenant
+        \Log::info("SubscriptionController - Calling training API to create tenant", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
         $response = Http::post('http://localhost:5000/api/tenants/create', [
             'user_id' => $user->id,
             'company_name' => $user->company_name,
@@ -88,7 +93,21 @@ class SubscriptionController extends Controller
 
         $data = $response->json();
 
+        // LOG: Response from training API
+        \Log::info("SubscriptionController - Training API response", [
+            'tenant_id' => $data['tenant_id'],
+            'domain' => $data['domain'],
+            'admin_url' => $data['admin_url'] ?? 'N/A',
+        ]);
+
         // Save subscription with admin credentials
+        \Log::info("SubscriptionController - About to create subscription", [
+            'user_id' => $user->id,
+            'product' => 'training',
+            'tenant_id' => $data['tenant_id'],
+            'domain' => $data['domain'],
+        ]);
+
         return Subscription::create([
             'user_id' => $user->id,
             'product' => 'training',
@@ -96,6 +115,7 @@ class SubscriptionController extends Controller
             'domain' => $data['domain'],
             'url' => $data['admin_url'] ?? 'http://localhost:5000/admin',
             'is_active' => true,
+            'status' => 'active',
             'meta' => [
                 'admin_url' => $data['admin_url'] ?? 'http://localhost:5000/admin',
                 'admin_username' => $data['admin_username'] ?? $data['admin_email'],
@@ -118,6 +138,11 @@ class SubscriptionController extends Controller
     private function subscribeServices($user)
     {
         // Call Services Platform API to create tenant
+        \Log::info("SubscriptionController - Calling services API to create tenant", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
         $response = Http::post('http://localhost:7000/api/tenants/create', [
             'user_id' => $user->id,
             'company_name' => $user->company_name,
@@ -130,7 +155,21 @@ class SubscriptionController extends Controller
 
         $data = $response->json();
 
+        // LOG: Response from services API
+        \Log::info("SubscriptionController - Services API response", [
+            'tenant_id' => $data['tenant_id'],
+            'domain' => $data['domain'],
+            'admin_url' => $data['admin_url'] ?? 'N/A',
+        ]);
+
         // Save subscription with admin credentials
+        \Log::info("SubscriptionController - About to create subscription", [
+            'user_id' => $user->id,
+            'product' => 'services',
+            'tenant_id' => $data['tenant_id'],
+            'domain' => $data['domain'],
+        ]);
+
         return Subscription::create([
             'user_id' => $user->id,
             'product' => 'services',
@@ -138,6 +177,7 @@ class SubscriptionController extends Controller
             'domain' => $data['domain'],
             'url' => $data['admin_url'] ?? 'http://localhost:7000/admin',
             'is_active' => true,
+            'status' => 'active',
             'meta' => [
                 'admin_url' => $data['admin_url'] ?? 'http://localhost:7000/admin',
                 'admin_username' => $data['admin_username'] ?? $data['admin_email'],
@@ -181,12 +221,9 @@ class SubscriptionController extends Controller
             ],
         ]);
 
-        // Dispatch jobs to queue for background processing in sequence
-        // First create Keycloak realm, then create Kayan ERP site
-        Bus::chain([
-            new CreateTenantKeycloakRealm($subscription, $user),
-            new CreateKayanERPSite($subscription, $user, $adminPassword),
-        ])->dispatch();
+        // Dispatch job to create Kayan ERP site
+        // Keycloak integration will be triggered automatically after site creation
+        dispatch(new CreateKayanERPSite($subscription, $user, $adminPassword));
 
         return $subscription;
     }

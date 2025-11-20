@@ -20,19 +20,9 @@
 </script>
 @endif
 
-<div class="min-h-screen bg-gray-100">
-    <nav class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold">SaaS Marketplace</h1>
-            <div class="flex items-center gap-4">
-                <span>{{ auth()->user()->name }}</span>
-                <form method="POST" action="{{ route('logout') }}" class="inline">
-                    @csrf
-                    <button class="text-red-600 hover:text-red-800">خروج</button>
-                </form>
-            </div>
-        </div>
-    </nav>
+<div class="min-h-screen bg-gray-100" style="margin-right: 16rem;">
+    @include('partials.sidebar')
+
     <div class="max-w-7xl mx-auto py-6 px-4">
         @if($isProcessing)
             <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4 flex items-center justify-between">
@@ -64,18 +54,25 @@
         </div>
 
         @php
-            // Check if user has any subscription with Keycloak realm
-            $hasKeycloakRealm = $subscriptions->whereNotNull('keycloak_realm_id')->first();
+            // Check if user has Keycloak realm
+            $user = auth()->user();
+            $hasKeycloakRealm = $user->keycloak_realm_id;
+
+            // Build Keycloak info
+            $keycloakInfo = null;
+            if ($hasKeycloakRealm) {
+                $keycloakBaseUrl = config('services.keycloak.url', 'http://localhost:8090');
+                $keycloakInfo = [
+                    'realm_id' => $hasKeycloakRealm,
+                    'realm_login_url' => "{$keycloakBaseUrl}/realms/{$hasKeycloakRealm}/account",
+                    'realm_admin_url' => "{$keycloakBaseUrl}/admin/{$hasKeycloakRealm}/console",
+                    'admin_email' => $user->email,
+                    'admin_temp_password' => 'ChangeMe123!',
+                ];
+            }
         @endphp
 
-        @if($hasKeycloakRealm)
-            @php
-                // meta is already an array due to $casts in model
-                $kcMeta = is_array($hasKeycloakRealm->meta) ? $hasKeycloakRealm->meta : (json_decode($hasKeycloakRealm->meta, true) ?? []);
-                $keycloakInfo = $kcMeta['keycloak'] ?? null;
-            @endphp
-
-            @if($keycloakInfo)
+        @if($keycloakInfo)
                 <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 rounded-lg shadow mb-6 text-white">
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
@@ -149,7 +146,6 @@
                         </details>
                     </div>
                 </div>
-            @endif
         @endif
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Training Platform -->
